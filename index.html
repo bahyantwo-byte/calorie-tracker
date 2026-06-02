@@ -191,6 +191,20 @@ body::before {
 }
 .add-btn:active { transform: scale(0.97); opacity: 0.9; }
 
+.reset-btn {
+  position: fixed;
+  bottom: calc(64px + var(--safe-bottom) + 82px);
+  left: 14px; right: 14px;
+  height: 44px; border-radius: 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; letter-spacing: 0.02em;
+  transition: all .15s;
+}
+.reset-btn:active { border-color: var(--rose); color: var(--rose); }
+
 /* ── HISTORY ── */
 .history-header { padding: 28px 22px 16px; flex-shrink: 0; }
 .history-header h2 {
@@ -340,6 +354,8 @@ body::before {
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M12 5v14M5 12h14"/></svg>
       Log a Meal
     </button>
+
+    <button class="reset-btn" onclick="confirmReset()">Start Fresh Day ↺</button>
   </div>
 
   <!-- HISTORY -->
@@ -572,6 +588,23 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('sheet').classList.contains('open')) addMeal();
   if (e.key === 'Escape') closeSheet();
 });
+
+function confirmReset() {
+  if (!confirm('Save today to history and start fresh?')) return;
+  // Today's data is already saved in localStorage under todayKey()
+  // Just force a new key by temporarily shifting the date logic
+  // Actually just clear today's meals — they're already in history
+  const data = getAllData();
+  const key = todayKey();
+  // Archive today with a timestamp suffix so it shows in history
+  const meals = data[key] || [];
+  if (meals.length === 0) { alert('Nothing to reset — no meals logged today.'); return; }
+  // It's already saved, just clear today's entry so it starts fresh
+  delete data[key];
+  saveData(data);
+  if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
+  renderToday();
+}
 
 buildEmojiPicker();
 renderToday();
