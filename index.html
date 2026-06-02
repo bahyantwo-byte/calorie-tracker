@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kcal">
+<meta name="theme-color" content="#080810">
+<title>Kcal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      oklch(7%  0.012 260);
+  --bg2:     oklch(11% 0.015 260);
+  --bg3:     oklch(15% 0.018 260);
+  --border:  oklch(22% 0.02  260);
+  --green:   oklch(74% 0.22  142);
+  --green2:  oklch(82% 0.2   142);
+  --greend:  oklch(74% 0.22  142 / 0.12);
+  --text:    oklch(94% 0.006 85);
+  --dim:     oklch(52% 0.01  85);
+  --red:     oklch(62% 0.2   25);
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Outfit', system-ui, sans-serif;
+  min-height: 100dvh;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── APP SHELL ── */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  padding-top: var(--safe-top);
+}
+
+/* ── TAB BAR ── */
+.tabbar {
+  display: flex;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-bottom);
+  flex-shrink: 0;
+}
+.tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  gap: 4px; padding: 10px 0 8px;
+  font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--dim); cursor: pointer;
+  transition: color .2s;
+}
+.tab svg { width: 22px; height: 22px; stroke-width: 1.8; }
+.tab.active { color: var(--green); }
+
+/* ── SCREENS ── */
+.screen { display: none; flex: 1; overflow-y: auto; overflow-x: hidden; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* ── TODAY SCREEN ── */
+.today-top {
+  padding: 28px 24px 20px;
+  flex-shrink: 0;
+}
+.today-date {
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 6px;
+}
+.today-total {
+  display: flex; align-items: flex-end; gap: 8px; margin-bottom: 20px;
+}
+.total-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 4.5rem; font-weight: 500; line-height: 1;
+  color: var(--text); letter-spacing: -0.03em;
+}
+.total-label {
+  font-size: 0.78rem; color: var(--dim); font-weight: 500;
+  margin-bottom: 10px; letter-spacing: 0.04em;
+}
+
+/* Progress bar */
+.progress-track {
+  height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; border-radius: 2px;
+  background: var(--green);
+  transition: width .5s cubic-bezier(.4,0,.2,1);
+  max-width: 100%;
+}
+.progress-fill.over { background: var(--red); }
+.goal-row {
+  display: flex; justify-content: space-between;
+  font-size: 0.7rem; color: var(--dim); margin-top: 8px;
+}
+
+/* Meals list */
+.meals-section { padding: 0 16px 120px; flex: 1; }
+.section-label {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--dim);
+  padding: 4px 8px 12px;
+}
+.meal-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg2); border-radius: 14px;
+  padding: 16px; margin-bottom: 10px;
+  border: 1px solid var(--border);
+  animation: slideIn .25s ease-out;
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.meal-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--greend); display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; flex-shrink: 0;
+}
+.meal-info { flex: 1; min-width: 0; }
+.meal-name {
+  font-size: 0.95rem; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.meal-time { font-size: 0.72rem; color: var(--dim); margin-top: 2px; }
+.meal-cals {
+  font-family: 'DM Mono', monospace;
+  font-size: 1rem; font-weight: 500; color: var(--green);
+  flex-shrink: 0;
+}
+.meal-del {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: oklch(62% 0.2 25 / 0.1); border: none;
+  color: var(--red); font-size: 1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background .2s;
+}
+.meal-del:active { background: oklch(62% 0.2 25 / 0.25); }
+
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 60px 24px;
+  color: var(--dim); text-align: center; gap: 10px;
+}
+.empty-state svg { opacity: 0.3; width: 48px; height: 48px; }
+.empty-state p { font-size: 0.85rem; }
+
+/* Add button */
+.add-btn {
+  position: fixed; bottom: calc(64px + var(--safe-bottom) + 16px); left: 16px; right: 16px;
+  height: 58px; border-radius: 16px;
+  background: var(--green); color: var(--bg);
+  font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 700;
+  border: none; cursor: pointer; letter-spacing: 0.02em;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: transform .15s, background .15s;
+  box-shadow: 0 8px 32px oklch(74% 0.22 142 / 0.3);
+}
+.add-btn:active { transform: scale(0.97); background: var(--green2); }
+
+/* ── HISTORY SCREEN ── */
+.history-header {
+  padding: 28px 24px 16px;
+  font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+.history-list { padding: 0 16px 32px; }
+.history-day {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; margin-bottom: 10px; overflow: hidden;
+}
+.history-day-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px; cursor: pointer;
+}
+.history-day-date { font-size: 0.85rem; font-weight: 600; }
+.history-day-total {
+  font-family: 'DM Mono', monospace;
+  font-size: 1rem; font-weight: 500; color: var(--green);
+}
+.history-meals { border-top: 1px solid var(--border); display: none; }
+.history-meals.open { display: block; }
+.history-meal-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 16px; border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.history-meal-row:last-child { border-bottom: none; }
+.history-meal-cal {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.82rem; color: var(--dim);
+}
+.chevron {
+  transition: transform .2s; color: var(--dim);
+  font-size: 0.8rem;
+}
+.chevron.open { transform: rotate(180deg); }
+.no-history {
+  text-align: center; padding: 60px 24px;
+  color: var(--dim); font-size: 0.85rem;
+}
+
+/* ── SHEET ── */
+.sheet-overlay {
+  position: fixed; inset: 0; background: oklch(0% 0 0 / 0.7);
+  z-index: 100; display: none; align-items: flex-end;
+  backdrop-filter: blur(4px);
+}
+.sheet-overlay.open { display: flex; }
+.sheet {
+  background: var(--bg2); border-radius: 24px 24px 0 0;
+  padding: 0 20px calc(24px + var(--safe-bottom));
+  width: 100%; border-top: 1px solid var(--border);
+  transform: translateY(100%);
+  transition: transform .35s cubic-bezier(.32,0,.67,0);
+}
+.sheet-overlay.open .sheet {
+  transform: translateY(0);
+  transition: transform .35s cubic-bezier(.33,1,.68,1);
+}
+.sheet-handle {
+  width: 36px; height: 4px; background: var(--border);
+  border-radius: 2px; margin: 14px auto 20px;
+}
+.sheet-title {
+  font-size: 1.15rem; font-weight: 700; margin-bottom: 20px;
+  letter-spacing: -0.01em;
+}
+.input-group { margin-bottom: 14px; }
+.input-label {
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--dim); margin-bottom: 8px;
+  display: block;
+}
+.input-field {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 12px; padding: 15px 16px;
+  color: var(--text); font-family: 'Outfit', sans-serif;
+  font-size: 1rem; font-weight: 500; outline: none;
+  transition: border-color .2s;
+  -webkit-appearance: none;
+}
+.input-field:focus { border-color: var(--green); }
+.input-field::placeholder { color: var(--dim); }
+.sheet-add-btn {
+  width: 100%; height: 56px; border-radius: 14px;
+  background: var(--green); color: var(--bg);
+  font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 700;
+  border: none; cursor: pointer; margin-top: 6px;
+  transition: transform .15s, background .15s;
+}
+.sheet-add-btn:active { transform: scale(0.97); }
+.sheet-add-btn:disabled { opacity: 0.4; }
+
+/* Quick calories */
+.quick-cals {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.quick-btn {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 14px;
+  font-family: 'Outfit', sans-serif; font-size: 0.82rem;
+  font-weight: 600; color: var(--dim); cursor: pointer;
+  transition: all .15s;
+}
+.quick-btn:active { background: var(--greend); border-color: var(--green); color: var(--green); }
+
+/* emoji picker row */
+.emoji-row {
+  display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto;
+  scrollbar-width: none; padding-bottom: 2px;
+}
+.emoji-row::-webkit-scrollbar { display: none; }
+.emoji-opt {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: var(--bg3); border: 2px solid transparent;
+  font-size: 1.2rem; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color .15s;
+}
+.emoji-opt.selected { border-color: var(--green); background: var(--greend); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- TODAY SCREEN -->
+  <div class="screen active" id="screen-today">
+    <div class="today-top">
+      <div class="today-date" id="today-date"></div>
+      <div class="today-total">
+        <div class="total-num" id="total-num">0</div>
+        <div class="total-label">kcal today</div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <div class="goal-row">
+        <span id="remaining-label">0 remaining</span>
+        <span id="goal-label">Goal: 2000</span>
+      </div>
+    </div>
+
+    <div class="meals-section">
+      <div class="section-label">Today's Meals</div>
+      <div id="meals-list"></div>
+    </div>
+
+    <button class="add-btn" onclick="openSheet()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20"><path d="M12 5v14M5 12h14"/></svg>
+      Add Meal
+    </button>
+  </div>
+
+  <!-- HISTORY SCREEN -->
+  <div class="screen" id="screen-history">
+    <div class="history-header">History</div>
+    <div class="history-list" id="history-list"></div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tabbar">
+    <div class="tab active" id="tab-today" onclick="switchTab('today')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
+      </svg>
+      Today
+    </div>
+    <div class="tab" id="tab-history" onclick="switchTab('history')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M3 12h18M3 6h18M3 18h18"/>
+      </svg>
+      History
+    </div>
+  </div>
+</div>
+
+<!-- ADD MEAL SHEET -->
+<div class="sheet-overlay" id="sheet" onclick="handleOverlayClick(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Add Meal</div>
+
+    <!-- Emoji picker -->
+    <div class="emoji-row" id="emoji-row"></div>
+
+    <div class="input-group">
+      <label class="input-label">Meal Name</label>
+      <input class="input-field" id="meal-name" type="text" placeholder="e.g. Grilled Chicken" autocomplete="off" autocorrect="off">
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">Calories</label>
+      <input class="input-field" id="meal-cals" type="number" placeholder="e.g. 450" inputmode="numeric">
+    </div>
+
+    <div class="quick-cals">
+      <button class="quick-btn" onclick="setCals(100)">100</button>
+      <button class="quick-btn" onclick="setCals(200)">200</button>
+      <button class="quick-btn" onclick="setCals(350)">350</button>
+      <button class="quick-btn" onclick="setCals(500)">500</button>
+      <button class="quick-btn" onclick="setCals(700)">700</button>
+    </div>
+
+    <button class="sheet-add-btn" id="sheet-add-btn" onclick="addMeal()">Add Meal</button>
+  </div>
+</div>
+
+<script>
+const EMOJIS = ['🍗','🥗','🍝','🥩','🍜','🥪','🍳','🥑','🍕','🥤','🍎','🍫','🥐','🍚','🌮'];
+const GOAL = 2000;
+let selectedEmoji = EMOJIS[0];
+
+// ── Storage ──
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getAllData() {
+  return JSON.parse(localStorage.getItem('kcal_data') || '{}');
+}
+
+function saveData(data) {
+  localStorage.setItem('kcal_data', JSON.stringify(data));
+}
+
+function getTodayMeals() {
+  return getAllData()[todayKey()] || [];
+}
+
+function saveMeal(meal) {
+  const data = getAllData();
+  const key = todayKey();
+  if (!data[key]) data[key] = [];
+  data[key].push(meal);
+  saveData(data);
+}
+
+function deleteMeal(id) {
+  const data = getAllData();
+  const key = todayKey();
+  data[key] = (data[key] || []).filter(m => m.id !== id);
+  if (data[key].length === 0) delete data[key];
+  saveData(data);
+}
+
+// ── Render Today ──
+function renderToday() {
+  const meals = getTodayMeals();
+  const total = meals.reduce((s, m) => s + m.calories, 0);
+
+  // Date
+  const d = new Date();
+  document.getElementById('today-date').textContent = d.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
+
+  // Total
+  document.getElementById('total-num').textContent = total.toLocaleString();
+
+  // Progress
+  const pct = Math.min((total / GOAL) * 100, 100);
+  const fill = document.getElementById('progress-fill');
+  fill.style.width = pct + '%';
+  fill.classList.toggle('over', total > GOAL);
+
+  // Labels
+  const remaining = GOAL - total;
+  document.getElementById('remaining-label').textContent = remaining >= 0
+    ? `${remaining.toLocaleString()} remaining`
+    : `${Math.abs(remaining).toLocaleString()} over goal`;
+  document.getElementById('goal-label').textContent = `Goal: ${GOAL.toLocaleString()}`;
+
+  // Meals list
+  const list = document.getElementById('meals-list');
+  if (meals.length === 0) {
+    list.innerHTML = `<div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
+        <path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>
+      </svg>
+      <p>No meals logged yet.<br>Tap Add Meal to start.</p>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = meals.map(m => `
+    <div class="meal-item">
+      <div class="meal-icon">${m.emoji || '🍽️'}</div>
+      <div class="meal-info">
+        <div class="meal-name">${m.name}</div>
+        <div class="meal-time">${m.time}</div>
+      </div>
+      <div class="meal-cals">${m.calories.toLocaleString()}</div>
+      <button class="meal-del" onclick="handleDelete('${m.id}')">×</button>
+    </div>
+  `).join('');
+}
+
+function handleDelete(id) {
+  if (navigator.vibrate) navigator.vibrate(10);
+  deleteMeal(id);
+  renderToday();
+}
+
+// ── Render History ──
+function renderHistory() {
+  const data = getAllData();
+  const today = todayKey();
+  const keys = Object.keys(data)
+    .filter(k => k !== today)
+    .sort((a, b) => b.localeCompare(a));
+
+  const container = document.getElementById('history-list');
+
+  if (keys.length === 0) {
+    container.innerHTML = '<div class="no-history">No history yet — keep logging!</div>';
+    return;
+  }
+
+  container.innerHTML = keys.map(key => {
+    const meals = data[key];
+    const total = meals.reduce((s, m) => s + m.calories, 0);
+    const dateStr = new Date(key + 'T12:00:00').toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+    return `
+      <div class="history-day">
+        <div class="history-day-header" onclick="toggleDay(this)">
+          <div class="history-day-date">${dateStr}</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="history-day-total">${total.toLocaleString()} kcal</div>
+            <span class="chevron">▾</span>
+          </div>
+        </div>
+        <div class="history-meals">
+          ${meals.map(m => `
+            <div class="history-meal-row">
+              <span>${m.emoji || '🍽️'} ${m.name}</span>
+              <span class="history-meal-cal">${m.calories.toLocaleString()}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleDay(header) {
+  const meals = header.nextElementSibling;
+  const chevron = header.querySelector('.chevron');
+  meals.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+
+// ── Tabs ──
+function switchTab(tab) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('screen-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'history') renderHistory();
+}
+
+// ── Sheet ──
+function openSheet() {
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('meal-name').value = '';
+  document.getElementById('meal-cals').value = '';
+  setTimeout(() => document.getElementById('meal-name').focus(), 350);
+}
+
+function closeSheet() {
+  document.getElementById('sheet').classList.remove('open');
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('sheet')) closeSheet();
+}
+
+function setCals(n) {
+  document.getElementById('meal-cals').value = n;
+}
+
+function addMeal() {
+  const name = document.getElementById('meal-name').value.trim();
+  const cals = parseInt(document.getElementById('meal-cals').value);
+
+  if (!name || isNaN(cals) || cals <= 0) return;
+
+  const now = new Date();
+  const time = now.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit'});
+
+  saveMeal({
+    id: Date.now().toString(),
+    name,
+    calories: cals,
+    emoji: selectedEmoji,
+    time,
+  });
+
+  if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
+  closeSheet();
+  renderToday();
+}
+
+// ── Emoji picker ──
+function buildEmojiPicker() {
+  const row = document.getElementById('emoji-row');
+  row.innerHTML = EMOJIS.map((e, i) => `
+    <div class="emoji-opt${i === 0 ? ' selected' : ''}" onclick="selectEmoji(this, '${e}')">${e}</div>
+  `).join('');
+}
+
+function selectEmoji(el, emoji) {
+  document.querySelectorAll('.emoji-opt').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedEmoji = emoji;
+}
+
+// ── Enter key ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('sheet').classList.contains('open')) {
+    addMeal();
+  }
+  if (e.key === 'Escape') closeSheet();
+});
+
+// ── Init ──
+buildEmojiPicker();
+renderToday();
+</script>
+</body>
+</html>
