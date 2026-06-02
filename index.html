@@ -405,7 +405,10 @@ const GOAL = 2000;
 const EMOJIS = ['🥗','🍗','🍎','🥑','🍜','🍳','🥪','🍚','🍕','🥤','🍫','🥐','🌮','🍱','🫐','🍦'];
 let selectedEmoji = EMOJIS[0];
 
-function todayKey() { return new Date().toISOString().slice(0, 10); }
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 function getAllData() { return JSON.parse(localStorage.getItem('chowvy_kcal') || '{}'); }
 function saveData(d) { localStorage.setItem('chowvy_kcal', JSON.stringify(d)); }
 function getTodayMeals() { return getAllData()[todayKey()] || []; }
