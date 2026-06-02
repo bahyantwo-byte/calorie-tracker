@@ -505,6 +505,7 @@ function renderHistory() {
   const data = getAllData();
   const today = todayKey();
   const keys = Object.keys(data).filter(k => k !== today).sort((a,b) => b.localeCompare(a));
+
   const container = document.getElementById('history-list');
   if (!keys.length) {
     container.innerHTML = '<div class="no-history">No history yet — keep logging! ✿</div>';
@@ -513,7 +514,9 @@ function renderHistory() {
   container.innerHTML = keys.map(key => {
     const meals = data[key];
     const total = meals.reduce((s,m) => s + m.calories, 0);
-    const dateStr = new Date(key + 'T12:00:00').toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+    const baseDate = key.slice(0, 10);
+    const isArchive = key.length > 10;
+    const dateStr = new Date(baseDate + 'T12:00:00').toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'}) + (isArchive ? ' (reset)' : '');
     return `<div class="history-day">
       <div class="history-day-header" onclick="toggleDay(this)">
         <div class="history-day-date">${dateStr}</div>
@@ -591,15 +594,13 @@ document.addEventListener('keydown', e => {
 
 function confirmReset() {
   if (!confirm('Save today to history and start fresh?')) return;
-  // Today's data is already saved in localStorage under todayKey()
-  // Just force a new key by temporarily shifting the date logic
-  // Actually just clear today's meals — they're already in history
   const data = getAllData();
   const key = todayKey();
-  // Archive today with a timestamp suffix so it shows in history
   const meals = data[key] || [];
   if (meals.length === 0) { alert('Nothing to reset — no meals logged today.'); return; }
-  // It's already saved, just clear today's entry so it starts fresh
+  // Archive today under a unique key so it shows in history
+  const archiveKey = key + '_' + Date.now();
+  data[archiveKey] = meals;
   delete data[key];
   saveData(data);
   if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
